@@ -30,6 +30,13 @@
       <div class="card">
         <div class="card-header">
           <h3 class="card-title">{{ t('orders.allOrders') }} ({{ orders.length }})</h3>
+          <button class="export-btn" @click="exportOrdersCsv" :title="t('orders.exportCsv')">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+              <path d="M10.75 2.75a.75.75 0 00-1.5 0v8.614L6.295 8.235a.75.75 0 10-1.09 1.03l4.25 4.5a.75.75 0 001.09 0l4.25-4.5a.75.75 0 00-1.09-1.03l-2.955 3.129V2.75z" />
+              <path d="M3.5 12.75a.75.75 0 00-1.5 0v2.5A2.75 2.75 0 004.75 18h10.5A2.75 2.75 0 0018 15.25v-2.5a.75.75 0 00-1.5 0v2.5c0 .69-.56 1.25-1.25 1.25H4.75c-.69 0-1.25-.56-1.25-1.25v-2.5z" />
+            </svg>
+            {{ t('orders.exportCsv') }}
+          </button>
         </div>
         <div class="table-container">
           <table class="orders-table">
@@ -83,6 +90,7 @@ import { ref, onMounted, watch, computed } from 'vue'
 import { api } from '../api'
 import { useFilters } from '../composables/useFilters'
 import { useI18n } from '../composables/useI18n'
+import { exportToCsv } from '../utils/csv'
 
 export default {
   name: 'Orders',
@@ -153,6 +161,32 @@ export default {
       })
     }
 
+    const exportOrdersCsv = () => {
+      const columns = [
+        { key: 'orderNumber', label: t('orders.table.orderNumber') },
+        { key: 'customer', label: t('orders.table.customer') },
+        { key: 'items', label: t('orders.table.items') },
+        { key: 'status', label: t('orders.table.status') },
+        { key: 'orderDate', label: t('orders.table.orderDate') },
+        { key: 'expectedDelivery', label: t('orders.table.expectedDelivery') },
+        { key: 'totalValue', label: t('orders.table.totalValue') }
+      ]
+
+      const rows = orders.value.map(order => ({
+        orderNumber: order.order_number,
+        customer: translateCustomerName(order.customer),
+        items: order.items
+          .map(item => `${translateProductName(item.name)} x${item.quantity}`)
+          .join('; '),
+        status: t(`status.${order.status.toLowerCase()}`),
+        orderDate: formatDate(order.order_date),
+        expectedDelivery: formatDate(order.expected_delivery),
+        totalValue: order.total_value
+      }))
+
+      exportToCsv('orders-export.csv', rows, columns)
+    }
+
     onMounted(loadOrders)
 
     return {
@@ -163,6 +197,7 @@ export default {
       getOrdersByStatus,
       getOrderStatusClass,
       formatDate,
+      exportOrdersCsv,
       currencySymbol,
       translateProductName,
       translateCustomerName
@@ -172,6 +207,33 @@ export default {
 </script>
 
 <style scoped>
+.export-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.5rem 0.875rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: white;
+  color: #0f172a;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s;
+}
+
+.export-btn svg {
+  width: 16px;
+  height: 16px;
+  color: #64748b;
+}
+
+.export-btn:hover {
+  background: #f8fafc;
+  border-color: #94a3b8;
+}
+
 /* Fixed table layout to prevent column shifting */
 .orders-table {
   table-layout: fixed;
