@@ -40,7 +40,14 @@
                 <th>{{ t('inventory.table.sku') }}</th>
                 <th>{{ t('inventory.table.itemName') }}</th>
                 <th>{{ t('inventory.table.category') }}</th>
-                <th>{{ t('inventory.table.quantityOnHand') }}</th>
+                <th class="sortable" @click="toggleQuantitySort">
+                  <span class="th-content">
+                    {{ t('inventory.table.quantityOnHand') }}
+                    <svg v-if="sortDirection === 'asc'" class="sort-icon active" viewBox="0 0 20 20" fill="currentColor"><path d="M10 6l-5 6h10l-5-6z"/></svg>
+                    <svg v-else-if="sortDirection === 'desc'" class="sort-icon active" viewBox="0 0 20 20" fill="currentColor"><path d="M10 14l5-6H5l5 6z"/></svg>
+                    <svg v-else class="sort-icon" viewBox="0 0 20 20" fill="currentColor"><path d="M10 5l-4 4h8l-4-4zm0 10l4-4H6l4 4z"/></svg>
+                  </span>
+                </th>
                 <th>{{ t('inventory.table.reorderPoint') }}</th>
                 <th>{{ t('inventory.table.unitCost') }}</th>
                 <th>{{ t('inventory.table.totalValue') }}</th>
@@ -106,6 +113,7 @@ export default {
     const error = ref(null)
     const items = ref([])
     const searchQuery = ref('')
+    const sortDirection = ref(null)
 
     // Modal state
     const showItemModal = ref(false)
@@ -140,7 +148,16 @@ export default {
         )
       }
 
-      // Sort by stock status: Low Stock first, then Adequate, then In Stock
+      // If an explicit quantity sort is active, sort by quantity_on_hand
+      if (sortDirection.value) {
+        return filtered.slice().sort((a, b) => {
+          return sortDirection.value === 'asc'
+            ? a.quantity_on_hand - b.quantity_on_hand
+            : b.quantity_on_hand - a.quantity_on_hand
+        })
+      }
+
+      // Default: Sort by stock status: Low Stock first, then Adequate, then In Stock
       // Always create a copy to avoid mutating the original array
       return filtered.slice().sort((a, b) => {
         const statusA = getStockStatusKey(a)
@@ -148,6 +165,10 @@ export default {
         return STATUS_ORDER[statusA] - STATUS_ORDER[statusB]
       })
     })
+
+    const toggleQuantitySort = () => {
+      sortDirection.value = sortDirection.value === 'asc' ? 'desc' : 'asc'
+    }
 
     const loadInventory = async () => {
       try {
@@ -209,6 +230,8 @@ export default {
       error,
       items,
       searchQuery,
+      sortDirection,
+      toggleQuantitySort,
       filteredItems,
       getStockStatus,
       getStockStatusClass,
@@ -335,5 +358,27 @@ export default {
 
 .clickable-row:hover {
   background: #eff6ff !important;
+}
+
+.sortable {
+  cursor: pointer;
+  user-select: none;
+}
+
+.th-content {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.sort-icon {
+  width: 12px;
+  height: 12px;
+  color: #cbd5e1;
+  flex-shrink: 0;
+}
+
+.sort-icon.active {
+  color: #2563eb;
 }
 </style>
